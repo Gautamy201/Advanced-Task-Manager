@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Template</title>
+    <style>
+      /* Add your CSS styling here */
+      .task {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+      }
+      .task-form {
+        margin-bottom: 20px;
+      }
+      .filter-buttons {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+  <script src="https://www.unpkg.com/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://www.unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script type="text/babel">
+    // Your  code will go here
+    function Task({ task, onUpdate, onDelete }) {
+      return (
+        <div className="task">
+          <h3>{task.title}</h3>
+          <p>Assignee: {task.assignee}</p>
+          <p>Status: {task.isCompleted ? "Completed" : "Incomplete"}</p>
+          <button onClick={() => onUpdate(task.id)}>Update</button>
+          <button onClick={() => onDelete(task.id)}>Delete</button>
+        </div>
+      );
+    }
+    function App() {
+      const [tasks, setTasks] = React.useState([]);
+      const [newTask, setNewTask] = React.useState({
+        title: "",
+        isCompleted: false,
+        assignee: "",
+      });
+      const [filter, setFilter] = React.useState("all");
+
+      React.useEffect(() => {
+        fetchTasks();
+      }, []);
+
+      const fetchTasks = async () => {
+        const response = await axios.get("http://localhost:5000/todos");
+        setTasks(response.data);
+      };
+
+      const addTask = async () => {
+        if (newTask.title && newTask.assignee) {
+          await axios.post("http://localhost:5000/todos", newTask);
+          fetchTasks();
+          setNewTask({ title: "", isCompleted: false, assignee: "" });
+        }
+      };
+
+      const updateTask = async (id) => {
+        const updatedTask = tasks.find((task) => task.id === id);
+        updatedTask.isCompleted = !updatedTask.isCompleted; // Toggle completion
+        await axios.put(`http://localhost:5000/todos/${id}`, updatedTask);
+        fetchTasks();
+      };
+
+      const deleteTask = async (id) => {
+        await axios.delete(`http://localhost:5000/todos/${id}`);
+        fetchTasks();
+      };
+
+      const filteredTasks = tasks.filter((task) => {
+        if (filter === "incomplete") return !task.isCompleted;
+        if (filter === "assignee") return task.assignee === "John Doe"; // Example assignee filter
+        return true;
+      });
+
+      return (
+        <div>
+          <div className="task-form">
+            <input
+              type="text"
+              placeholder="Task Title"
+              value={newTask.title}
+              onChange={(e) =>
+                setNewTask({ ...newTask, title: e.target.value })
+              }
+            />
+            <input
+              type="text"
+              placeholder="Assignee"
+              value={newTask.assignee}
+              onChange={(e) =>
+                setNewTask({ ...newTask, assignee: e.target.value })
+              }
+            />
+            <button onClick={addTask}>Add Task</button>
+          </div>
+
+          <div className="filter-buttons">
+            <button onClick={() => setFilter("all")}>Show All Tasks</button>
+            <button onClick={() => setFilter("incomplete")}>
+              Show Incomplete Tasks
+            </button>
+            <button onClick={() => setFilter("assignee")}>
+              Filter by Assignee
+            </button>
+          </div>
+
+          {filteredTasks.map((task) => (
+            <Task
+              key={task.id}
+              task={task}
+              onUpdate={updateTask}
+              onDelete={deleteTask}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</html>
